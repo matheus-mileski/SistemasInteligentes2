@@ -10,7 +10,7 @@ class MLP(object):
 	"""
 	Uma rede neural(Perceptron-multilayer) de 3 camadas
 	"""
-	def __init__(self,entrada, oculta, saida, taxaDeAprendizado = 0.1):
+	def __init__(self,entrada, oculta, saida, taxaDeAprendizado = 0.1, bias = 1, weights_input_hidden = None, weights_hidden_output = None):
 		"""
 		Entrada : número de entradas, de neurônios ocultos e saidas. Podendo também variar a taxa de aprendizado
 		"""
@@ -19,11 +19,15 @@ class MLP(object):
 		self.saida = saida
 		self.taxaDeAprendizado = taxaDeAprendizado
 
-		self.weights_input_hidden = np.random.uniform(-1, 1, (self.oculta, self.entrada))
-		self.bias_hidden = np.zeros((self.oculta, 1))
+		self.bias_hidden = np.zeros((self.oculta, bias))
+		self.bias_output = np.zeros((self.saida, bias))
 
-		self.weights_hidden_output = np.random.uniform(-1, 1, (self.saida, self.oculta))
-		self.bias_output = np.zeros((self.saida, 1))
+		if weights_input_hidden is None:
+			self.weights_input_hidden = np.random.uniform(-1, 1, (self.oculta, self.entrada))
+		
+		if weights_hidden_output is None:
+			self.weights_hidden_output = np.random.uniform(-1, 1, (self.saida, self.oculta))
+		
 	
 	def getTaxaDeAprendizado(self):
 		return self.taxaDeAprendizado
