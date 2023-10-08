@@ -26,22 +26,6 @@ class GeneticAlgorithm:
             mlp = MLP(self.entrada, hidden_neurons,
                       self.saida, taxaDeAprendizado=0.1)
             self.population.append(mlp)
-
-    def fitnessFunction(self, mlp):
-        game = FlappyBird_Human()
-
-        while not game.game_over:
-
-            inputs = game.get_inputs_for_mlp()
-
-            output = mlp.feedForward(np.array(inputs).reshape(-1, 1))[1]
-
-            jump_threshold = 0.5
-            should_jump = output[0][0] > jump_threshold
-
-            game.update(should_jump)
-
-        return game.score
     
     def fitnessFunction(self, mlp):
         game = FlappyBird_Human(mlp) 
@@ -53,7 +37,6 @@ class GeneticAlgorithm:
             should_jump = output[0][0] > jump_threshold
             game.update(should_jump)
 
-        
         return game.score
 
     def evaluateIndividual(self, mlp):
