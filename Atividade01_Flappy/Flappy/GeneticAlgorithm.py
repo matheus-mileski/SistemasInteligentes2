@@ -1,58 +1,124 @@
-# -------------------------------------------------------------------------------------------------
-# import required packages/libraries
-# -------------------------------------------------------------------------------------------------
+from MLP import MLP
+from Demo import FlappyBird_Human
+import random
+import copy
+import numpy as np
 
-# -------------------------------------------------------------------------------------------------
-# A class for a Genetic Algorithm 
-# -------------------------------------------------------------------------------------------------
 
 class GeneticAlgorithm:
-        
-    # constructor
-    def __init__(self):
-        # attributes
-        self.population = []
-        # number of Generations to execute
-        self.numberOfGenerations = 100
-        # stop GA execution is no improvement is observed after some generations
-        self.stopEarlyCriteria = 10
-        # population size
-        self.populationSize = 100
-        # mutation rate
-        self.mutationRate = 0.05
-        # best individual(s) returned after the GA is executed
-        self.bestIndividual = []
-        # best fitness value(s) obtained by the best individuals 
-        self.bestFitness = []
-        # elitism?
-            
-    # generate the initial population
-    def generateInitialPopulation(self):
-        pass   
-    
-    # fitness function to evaluate an individual
-    def fitnessFunction(self):
-        pass
-    
-    # receive an individual and evaluate its fitness
-    def evaluateIndividual(self):
-        pass 
-    
-    # given a population, selects two parents for crossover
-    def selectParents(self):
-        pass
-    
-    # given two parents, generate two children recombining them
-    def generateChildren(self):
-        pass
-    
-    # selects an individual and apply a mutation
-    def mutationOperator(self):
-        pass
+    def __init__(self, entrada, saida, population_size=100, mutation_rate=0.05, generations=100, early_stop=10):
+        self.entrada = entrada
+        self.saida = saida
+        self.population_size = population_size
+        self.mutation_rate = mutation_rate
+        self.generations = generations
+        self.early_stop = early_stop
 
-    # run GA
-    def execute(self):
-        pass
+        self.population = []
+        self.best_individual = None
+        self.best_fitness = float('-inf')
+
+    def generateInitialPopulation(self):
+        for _ in range(self.populationSize):
+            # Create a random MLP architecture
+            # You can adjust the range based on your needs
+            hidden_neurons = random.randint(1, 20)
+            mlp = MLP(self.entrada, hidden_neurons,
+                      self.saida, taxaDeAprendizado=0.1)
+            self.population.append(mlp)
+
+    def fitnessFunction(self, mlp):
+        game = FlappyBird_Human()
+
+        while not game.game_over:
+
+            inputs = game.get_inputs_for_mlp()
+
+            output = mlp.feedForward(np.array(inputs).reshape(-1, 1))[1]
+
+            jump_threshold = 0.5
+            should_jump = output[0][0] > jump_threshold
+
+            game.update(should_jump)
+
+        return game.score
     
-# -------------------------------------------------------------------------------------------------
-# -------------------------------------------------------------------------------------------------
+    def fitnessFunction(self, mlp):
+        game = FlappyBird_Human(mlp) 
+
+        while not game.game_over:
+            inputs = game.get_inputs_for_mlp()
+            output = mlp.feedForward(np.array(inputs).reshape(-1, 1))[1]
+            jump_threshold = 0.5
+            should_jump = output[0][0] > jump_threshold
+            game.update(should_jump)
+
+        
+        return game.score
+
+    def evaluateIndividual(self, mlp):
+        fitness = self.fitnessFunction(mlp)
+        return fitness
+
+    def selectParents(self):
+        tournament_size = 3
+        tournament = random.sample(self.population, tournament_size)
+        parent = max(tournament, key=lambda mlp: self.evaluate_fitness(mlp))
+        return parent
+
+    def generateChildren(self, parent1, parent2):
+        child1 = copy.deepcopy(parent1)
+        child2 = copy.deepcopy(parent2)
+
+        # Crossover simples: trocar os pesos dos pais para criar os filhos
+        child1.weights_input_hidden = parent2.weights_input_hidden
+        child2.weights_input_hidden = parent1.weights_input_hidden
+
+        return child1, child2
+
+    def mutate(self, mlp):
+        if random.uniform(0, 1) < self.mutation_rate:
+            if random.choice([True, False]):
+                new_neuron = [random.uniform(-1, 1) for _ in range(len(mlp.weights_input_hidden[0]))]
+                mlp.weights_input_hidden.append(new_neuron)
+            else:
+                if len(mlp.weights_input_hidden) > 1:
+                    idx = random.randint(0, len(mlp.weights_input_hidden) - 1)
+                    del mlp.weights_input_hidden[idx]
+        return mlp
+
+    def execute(self):
+        self.generateInitialPopulation()
+
+        for generation in range(self.generations):
+            new_population = []
+            for _ in range(self.population_size // 2):
+                parent1 = self.select_parents()
+                parent2 = self.select_parents()
+                child1, child2 = self.generateChildren(parent1, parent2)
+                child1 = self.mutate(child1)
+                child2 = self.mutate(child2)
+                new_population.extend([child1, child2])
+
+            self.population = new_population
+
+        # Avalia o fitness de cada indivíduo na população
+            best_in_generation = None
+            best_fitness_in_generation = float('-inf')
+            for mlp in self.population:
+                fitness = self.evaluate_fitness(mlp)
+                if fitness > best_fitness_in_generation:
+                    best_fitness_in_generation = fitness
+                    best_in_generation = mlp
+
+        # Verifica se o critério de parada antecipada é atendido
+            if generation > self.early_stop:
+                if all(mlp == best_in_generation for mlp in self.population[-self.early_stop:]):
+                    break  
+
+        # Atualiza o melhor indivíduo global
+        if best_fitness_in_generation > self.best_fitness:
+            self.best_fitness = best_fitness_in_generation
+            self.best_individual = best_in_generation
+            
+        return self.best_individual

@@ -2,10 +2,14 @@ import pygame
 from pygame.locals import *  # noqa
 import sys
 import random
+import numpy as np
+from GeneticAlgorithm import GeneticAlgorithm
+from MLP import MLP
 
 
 class FlappyBird_Human:
-    def __init__(self):
+    def __init__(self,mlp):
+        pygame.init()
         self.screen = pygame.display.set_mode((400, 700))
         self.bird = pygame.Rect(65, 50, 50, 50)
         self.background = pygame.image.load("assets/background.png").convert()
@@ -24,6 +28,8 @@ class FlappyBird_Human:
         self.sprite = 0
         self.counter = 0
         self.offset = random.randint(-200, 200)
+        self.mlp = mlp
+        self.score = 0
 
     def updateWalls(self):
         self.wallx -= 4
@@ -31,6 +37,9 @@ class FlappyBird_Human:
             self.wallx = 400
             self.counter += 1
             self.offset = random.randint(-200, 200)
+
+        if self.wallx + self.wallUp.get_width() < self.bird[0]:
+            self.score +=1
 
     def birdUpdate(self):
         if self.jump:
@@ -61,6 +70,37 @@ class FlappyBird_Human:
             self.wallx = 400
             self.offset = random.randint(-110, 110)
             self.gravity = 10
+
+    def jumpAction(self):
+        # Obter as coordenadas do pássaro e dos obstáculos
+        bird_x = 70  
+        bird_y = self.birdY
+        wall_x = self.wallx
+        wall_top_y = 360 + self.gap - self.offset
+        wall_bottom_y = 0 - self.gap - self.offset
+
+        # Calcular as distâncias e alturas relativas
+        horizontal_distance = wall_x - bird_x
+        height_difference_top = bird_y - wall_top_y
+        height_difference_bottom = wall_bottom_y - bird_y
+
+        # Normalizar as entradas para o intervalo [0, 1]
+        normalized_horizontal_distance = horizontal_distance / 400  
+        normalized_height_difference_top = height_difference_top / 700  
+        normalized_height_difference_bottom = height_difference_bottom / 700  
+
+        # Entradas para a MLP
+        inputs = [normalized_horizontal_distance, normalized_height_difference_top, normalized_height_difference_bottom]
+
+        # Executar a rede neural para obter a saída
+        outputs = self.mlp.feedForward(np.array(inputs).reshape(-1, 1))[1]  
+
+        # Decidir se o pássaro deve pular ou não com base nas saídas da MLP
+        if outputs[0][0] > 0.5:  
+            self.jump = 17
+            self.gravity = 10
+            self.jumpSpeed = 15
+
 
     def run(self):
         clock = pygame.time.Clock()
@@ -98,7 +138,12 @@ class FlappyBird_Human:
             self.updateWalls()
             self.birdUpdate()
             pygame.display.update()
-            
 
 if __name__ == "__main__":
-    FlappyBird_Human().run()
+    mlp = MLP(3,15,1, taxaDeAprendizado=0.1)
+    
+    ga = GeneticAlgorithm(3,1)
+    best_mlp = ga.execute()
+    
+    game = FlappyBird_Human(mlp)
+    game.run()
