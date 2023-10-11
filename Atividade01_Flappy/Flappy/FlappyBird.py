@@ -142,7 +142,7 @@ class Pipe(object):
     def __init__(self, x):
         self.x = x
         self.height = 0
-        self.gap = 120
+        self.GAP = FlappyBird.GAP
 
         self.top = 0
         self.bottom = 0

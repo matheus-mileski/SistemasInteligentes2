@@ -39,6 +39,8 @@ python MLP.py
     - n de neurфnios de entrada
     - indices dos neurфnios de entrada
     - n de neurфnios da camada oculta
+    - learning rate
+    - normalizador de input
     - bias
     - pesos de entrada
     - pesos de saнda

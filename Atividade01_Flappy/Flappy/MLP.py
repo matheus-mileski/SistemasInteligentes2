@@ -20,8 +20,8 @@ class MLP(object):
         """
         Entrada : número de entradas, de neurônios ocultos e saidas. Podendo também variar a taxa de aprendizado
         """
-        self.entrada = entrada
-        self.oculta = oculta
+        self.entrada = int(entrada)
+        self.oculta = int(oculta)
         self.saida = saida
         self.taxaDeAprendizado = taxaDeAprendizado
         self.bias = bias
@@ -101,6 +101,7 @@ class MLP(object):
         # Calcula as ativações da camada de saída
         neuroniosSaida = np.dot(self.pesosSaida, saidaOculta) + self.biasSaida
         resultado = np.vectorize(self.ativacaoSigmoidal)(neuroniosSaida)
+
         return saidaOculta, resultado
 
     def backPropagation(self, dados, esperado):
