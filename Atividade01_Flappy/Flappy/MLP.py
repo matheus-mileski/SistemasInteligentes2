@@ -1,156 +1,150 @@
 from math import exp
 import numpy as np
-from sklearn.datasets import load_iris
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
-from tensorflow.keras.utils import to_categorical
 
 
 class MLP(object):
-	"""
-	Uma rede neural(Perceptron-multilayer) de 3 camadas
-	"""
-	def __init__(self,entrada, oculta, saida, taxaDeAprendizado = 0.1, bias = 1, weights_input_hidden = None, weights_hidden_output = None):
-		"""
-		Entrada : número de entradas, de neurônios ocultos e saidas. Podendo também variar a taxa de aprendizado
-		"""
-		self.entrada = entrada
-		self.oculta = oculta
-		self.saida = saida
-		self.taxaDeAprendizado = taxaDeAprendizado
+    """
+    Uma rede neural(Perceptron-multilayer) de 3 camadas
+    """
 
-		self.bias_hidden = np.zeros((self.oculta, bias))
-		self.bias_output = np.zeros((self.saida, bias))
+    def __init__(
+        self,
+        entrada,
+        oculta,
+        saida,
+        taxaDeAprendizado=0.01,
+        bias=1,
+        pesosOculta=None,
+        pesosSaida=None,
+    ):
+        """
+        Entrada : número de entradas, de neurônios ocultos e saidas. Podendo também variar a taxa de aprendizado
+        """
+        self.entrada = entrada
+        self.oculta = oculta
+        self.saida = saida
+        self.taxaDeAprendizado = taxaDeAprendizado
+        self.bias = bias
+        self.score = 0
 
-		if weights_input_hidden is None:
-			self.weights_input_hidden = np.random.uniform(-1, 1, (self.oculta, self.entrada))
-		
-		if weights_hidden_output is None:
-			self.weights_hidden_output = np.random.uniform(-1, 1, (self.saida, self.oculta))
-		
-	
-	def getTaxaDeAprendizado(self):
-		return self.taxaDeAprendizado
-		
-	def setTaxaDeAprendizado(self,taxa):
-		self.taxaDeAprendizado = taxaDeAprendizado
+        self.biasOculta = np.zeros((self.oculta, bias))
+        self.biasSaida = np.zeros((self.saida, bias))
 
-	def ativacaoSigmoidal(self, valor):
-		"""
-		Função ativadora Sigmoidal = 1 / (1 + e ^ - valor)
-		Entrada : Valor a ser aplicado na função
-		Retorno : Resultado da aplicação
-		"""
-		if valor >= 0:
-			return 1.0 / (1.0 + np.exp(-valor))
-		else:
-			exp_val = np.exp(valor)
-			return exp_val / (1.0 + exp_val)
+        np.random.seed(49)
 
-	def derivadaAtivacaoSigmoidal(self, valor):
-		"""
-		Derivada da função ativadora Sigmoidal , dSigmoidal / dValor = Sigmoidal *(1 - Sigmoidal)
-		Entrada : Valor(Resultante da aplicação à sigmoidal) a ser aplicado na função
-		Retorno : Resultado da aplicação
-		"""
-		sigmoidal = self.ativacaoSigmoidal(valor)
-		return sigmoidal * (1 - sigmoidal)
+        if pesosOculta is None:
+            self.pesosOculta = np.random.uniform(-1, 1, (self.oculta, self.entrada))
 
-	def erroQuadraticoMedio(self, esperado, valor):
-		"""
-		Calculo do erro
-		Entrada : O target e o valor deduzido
-		Retorno : Erro calculado dadas as entradas
-		"""		
-		error = esperado - valor
-		return np.sum(error**2)
-		
-	def feedForward(self, dados):
-		"""
-		Recebe as entradas e faz a classificação
-		Entrada : As N entradas(float) definidas no __init__
-		Retorno : Nenhum
-		"""
-		# Calculate the activations of the hidden layer
-		hidden_inputs = np.dot(self.weights_input_hidden, dados) + self.bias_hidden
-		hidden_outputs = np.vectorize(self.ativacaoSigmoidal)(hidden_inputs)
+        if pesosSaida is None:
+            self.pesosSaida = np.random.uniform(-1, 1, (self.saida, self.oculta))
 
-        # Calculate the activations of the output layer
-		output_inputs = np.dot(self.weights_hidden_output, hidden_outputs) + self.bias_output
-		output_outputs = np.vectorize(self.ativacaoSigmoidal)(output_inputs)
+    def setScore(self, score):
+        if score > self.score:
+            self.score = score
 
-		return hidden_outputs, output_outputs
+    def getTaxaDeAprendizado(self):
+        return self.taxaDeAprendizado
 
-	def backPropagation(self, dados, esperado):
-		"""
-		Pondera as classificações e faz as correções aos pesos
-		Entrada : Targets(float)
-		Retorno : Nenhum
-		"""
-		hidden_outputs, output_outputs = self.feedForward(dados)
+    def setTaxaDeAprendizado(self, taxa):
+        self.taxaDeAprendizado = taxa
 
-        # Calculate the error in the output layer
-		output_errors = esperado - output_outputs
-		#output_delta = output_errors * self.derivadaAtivacaoSigmoidal(output_outputs)
-		output_delta = output_errors * np.vectorize(self.ativacaoSigmoidal)(output_outputs)
+    def getParametros(self):
+        params = {
+            "neuroniosEntrada": self.entrada,
+            "neuroniosOculta": self.oculta,
+            "neuroniosSaida": self.saida,
+            "taxaDeAprendizado": self.taxaDeAprendizado,
+            "bias": self.bias,
+            "pesosOculta": self.pesosOculta,
+            "pesosSaida": self.pesosSaida,
+            "score": self.score,
+        }
 
-        # Calculate the error in the hidden layer
-		hidden_errors = np.dot(self.weights_hidden_output.T, output_delta)
-		#hidden_delta = hidden_errors * self.derivadaAtivacaoSigmoidal(hidden_outputs)
-		hidden_delta = hidden_errors * np.vectorize(self.ativacaoSigmoidal)(hidden_outputs)
+        return params
 
-        # Update weights and biases
-		self.weights_hidden_output += self.taxaDeAprendizado * np.dot(output_delta, hidden_outputs.T)
-		self.bias_output += self.taxaDeAprendizado * output_delta
-		self.weights_input_hidden += self.taxaDeAprendizado * np.dot(hidden_delta, dados.T)
-		self.bias_hidden += self.taxaDeAprendizado * hidden_delta
+    def ativacaoSigmoidal(self, valor):
+        """
+        Função ativadora Sigmoidal = 1 / (1 + e ^ - valor)
+        Entrada : Valor a ser aplicado na função
+        Retorno : Resultado da aplicação
+        """
+        exp_val = np.exp(-valor)
+        return 1.0 / (1.0 + exp_val)
 
-	
-	def treinamento(self, dados, esperado, epochs=1000):
-		for _ in range(epochs):
-			for i in range(len(dados)):
-				input_data = dados[i].reshape(-1, 1)
-				target_data = esperado[i].reshape(-1, 1)
-				self.feedForward(input_data)
-				self.backPropagation(input_data, target_data)
-		
+    def derivadaAtivacaoSigmoidal(self, valor):
+        """
+        Derivada da função ativadora Sigmoidal , dSigmoidal / dValor = Sigmoidal *(1 - Sigmoidal)
+        Entrada : Valor(Resultante da aplicação à sigmoidal) a ser aplicado na função
+        Retorno : Resultado da aplicação
+        """
+        return valor * (1 - valor)
 
-def evaluate_mlp(mlp, X_test, y_test):
-	correct = 0
-	for i in range(len(X_test)):
-		input_data = X_test[i].reshape(-1, 1)
-		target_data = y_test[i].reshape(-1, 1)
-		_, output = mlp.feedForward(input_data)
-		predicted_class = np.argmax(output)
-		true_class = np.argmax(target_data)
-		if predicted_class == true_class:
-			correct += 1
-	accuracy = correct / len(X_test)
-	return accuracy
+    def erroQuadraticoMedio(self, esperado, valor):
+        """
+        Calculo do erro
+        Entrada : O target e o valor deduzido
+        Retorno : Erro calculado dadas as entradas
+        """
+        error = esperado - valor
+        return error
 
-if __name__ == "__main__":
-	# Testing with the iris dataset
-	iris = load_iris()
-	X = iris.data
-	y = iris.target
+    def feedForward(self, dados):
+        """
+        Recebe as entradas e faz a classificação
+        Entrada : As N entradas(float) definidas no __init__
+        Retorno : Nenhum
+        """
+        # Calcula as ativações da camada oculta
+        neuroniosOculta = np.dot(self.pesosOculta, dados) + self.biasOculta
+        saidaOculta = np.vectorize(self.ativacaoSigmoidal)(neuroniosOculta)
 
-	# Split the dataset into training and testing sets
-	X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=2)
+        # Calcula as ativações da camada de saída
+        neuroniosSaida = np.dot(self.pesosSaida, saidaOculta) + self.biasSaida
+        resultado = np.vectorize(self.ativacaoSigmoidal)(neuroniosSaida)
+        return saidaOculta, resultado
 
-	scaler = StandardScaler()
-	X_train = scaler.fit_transform(X_train)
-	X_test = scaler.transform(X_test)
+    def backPropagation(self, dados, esperado):
+        """
+        Pondera as classificações e faz as correções aos pesos
+        Entrada : Targets(float)
+        Retorno : Nenhum
+        """
+        saidaOculta, resultado = self.feedForward(dados)
 
-	y_train = to_categorical(y_train, num_classes=3)
-	y_test = to_categorical(y_test, num_classes=3)
+        # Calcula o erro da camada de saida
+        erroSaida = self.erroQuadraticoMedio(esperado, resultado)
+        deltaSaida = erroSaida * np.vectorize(self.derivadaAtivacaoSigmoidal)(resultado)
 
-	entrada = 4  # Number of input features in the Iris dataset
-	#oculta = 15   # Number of hidden neurons (adjust as needed)
-	saida = 3    # Number of output classes (Iris has 3 classes)
+        # Calcula o erro na camada oculta
+        erroOculta = np.dot(self.pesosSaida.T, deltaSaida)
+        deltaOculta = erroOculta * np.vectorize(self.derivadaAtivacaoSigmoidal)(
+            saidaOculta
+        )
 
-	for oculta in range(1,20):
-		mlp = MLP(entrada, oculta, saida, taxaDeAprendizado=0.1)
-		mlp.treinamento(X_train, y_train, epochs=1000)
-		print(f"{oculta} layers")
-		accuracy = evaluate_mlp(mlp, X_test, y_test)
-		print(f"Test Accuracy: {accuracy * 100:.2f}%")
+        # Atualiza pesos e bias
+        self.pesosSaida += self.taxaDeAprendizado * np.dot(deltaSaida, saidaOculta.T)
+        self.biasSaida += self.taxaDeAprendizado * deltaSaida
+        self.pesosOculta += self.taxaDeAprendizado * np.dot(deltaOculta, dados.T)
+        self.biasOculta += self.taxaDeAprendizado * deltaOculta
+
+    def treinamento(self, dados, alvo, epocas=1000):
+        for _ in range(epocas):
+            for i in range(len(dados)):
+                entrada = dados[i].reshape(-1, 1)
+                esperado = alvo[i].reshape(-1, 1)
+                self.feedForward(entrada)
+                self.backPropagation(entrada, esperado)
+
+
+def avaliaMLP(mlp, X_test, y_test):
+    acertos = 0
+    for i in range(len(X_test)):
+        entrada = X_test[i].reshape(-1, 1)
+        esperado = y_test[i].reshape(-1, 1)
+        _, predito = mlp.feedForward(entrada)
+        classePredita = np.argmax(predito)
+        classeEsperada = np.argmax(esperado)
+        if classePredita == classeEsperada:
+            acertos += 1
+    acuracia = acertos / len(X_test)
+    return acuracia

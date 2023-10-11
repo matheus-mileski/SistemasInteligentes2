@@ -1,15 +1,15 @@
 from MLP import MLP
-from Demo import FlappyBird_Human
+from FlappyBird import FlappyBird_GeneticMLP
 import random
 import copy
 import numpy as np
 
 
 class GeneticAlgorithm:
-    def __init__(self, entrada, saida, population_size=100, mutation_rate=0.05, generations=100, early_stop=10):
+    def __init__(self, entrada, saida, populationSize=100, mutation_rate=0.05, generations=100, early_stop=10):
         self.entrada = entrada
         self.saida = saida
-        self.population_size = population_size
+        self.populationSize = populationSize
         self.mutation_rate = mutation_rate
         self.generations = generations
         self.early_stop = early_stop
@@ -28,14 +28,17 @@ class GeneticAlgorithm:
             self.population.append(mlp)
     
     def fitnessFunction(self, mlp):
-        game = FlappyBird_Human(mlp) 
-
-        while not game.game_over:
-            inputs = game.get_inputs_for_mlp()
+        game = FlappyBird_GeneticMLP(mlp) 
+        # game.jump()
+        while not game.dead:
+            inputs = game.getInputs()
+            print(inputs)
             output = mlp.feedForward(np.array(inputs).reshape(-1, 1))[1]
+            print(output)
             jump_threshold = 0.5
             should_jump = output[0][0] > jump_threshold
-            game.update(should_jump)
+            game.birdUpdate(should_jump)
+            print(game.score)
 
         return game.score
 
@@ -46,7 +49,7 @@ class GeneticAlgorithm:
     def selectParents(self):
         tournament_size = 3
         tournament = random.sample(self.population, tournament_size)
-        parent = max(tournament, key=lambda mlp: self.evaluate_fitness(mlp))
+        parent = max(tournament, key=lambda mlp: self.evaluateIndividual(mlp))
         return parent
 
     def generateChildren(self, parent1, parent2):
@@ -56,7 +59,8 @@ class GeneticAlgorithm:
         # Crossover simples: trocar os pesos dos pais para criar os filhos
         child1.weights_input_hidden = parent2.weights_input_hidden
         child2.weights_input_hidden = parent1.weights_input_hidden
-
+        print(child1.weights_input_hidden)
+        print(child2.weights_input_hidden)
         return child1, child2
 
     def mutate(self, mlp):
@@ -75,9 +79,9 @@ class GeneticAlgorithm:
 
         for generation in range(self.generations):
             new_population = []
-            for _ in range(self.population_size // 2):
-                parent1 = self.select_parents()
-                parent2 = self.select_parents()
+            for _ in range(self.populationSize // 2):
+                parent1 = self.selectParents()
+                parent2 = self.selectParents()
                 child1, child2 = self.generateChildren(parent1, parent2)
                 child1 = self.mutate(child1)
                 child2 = self.mutate(child2)
@@ -89,7 +93,7 @@ class GeneticAlgorithm:
             best_in_generation = None
             best_fitness_in_generation = float('-inf')
             for mlp in self.population:
-                fitness = self.evaluate_fitness(mlp)
+                fitness = self.evaluateIndividual(mlp)
                 if fitness > best_fitness_in_generation:
                     best_fitness_in_generation = fitness
                     best_in_generation = mlp
