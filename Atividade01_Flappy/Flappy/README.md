@@ -38,6 +38,7 @@ python AT01-SI2-MainFlappy.py
 
 ### Função de Fitness:
 - Função de Fitness: Score + (Máximo de Gerações do MLP - Geração final)
+    - Score máximo: 1000
     - Dessa forma bonificamos os agentes que chegam mais rápido na pontuação máxima.
 
 ### Seleção de Indivíduos:
