@@ -3,6 +3,8 @@ from FlappyBird import *
 import random
 from MLP import MLP
 import numpy as np
+import matplotlib.pyplot as plt
+import csv
 import os
 
 # os.environ["SDL_VIDEODRIVER"] = "dummy"
@@ -11,6 +13,7 @@ BASE = 510
 PIPE_INICIAL = 250
 POPULACAO = 1
 MAX_GERACOES = 100
+MAX_POINTS = 3000
 
 
 def getInputs(bird, pipe, norm, input_indices):
@@ -31,7 +34,58 @@ def getInputs(bird, pipe, norm, input_indices):
     return np.array(selected_inputs).reshape(-1, 1)
 
 
-def main(params):
+def plotResults(score_plot, generation, max_generations, solution_idx):
+    plt.plot(range(1, len(score_plot) + 1), score_plot)
+    plt.title(
+        f"Individuo AG: {solution_idx}\nGeração AG: {generation}/{max_generations}"
+    )
+    plt.xlabel("Geração")
+    plt.ylabel("Score")
+    plt.grid(True)
+    # results_dir = "results"
+    # if not os.path.exists(results_dir):
+    #     os.makedirs(results_dir)
+    plt.savefig(f"results/plot_{generation}_{solution_idx}.png")
+    plt.close()
+
+
+def saveResults(params, score_plot, generation, solution_idx):
+    csv_file = f"results/results.csv"
+    with open(csv_file, mode="a", newline="") as file:
+        writer = csv.writer(file)
+        # Escrevendo o cabeçalho apenas se o arquivo é novo
+        if file.tell() == 0:
+            writer.writerow(
+                [
+                    "GenerationGA",
+                    "SolutionIdx",
+                    "GenerationMLP",
+                    "Score",
+                    "n_input",
+                    "input_indices",
+                    "n_hidden",
+                    "learn_rate",
+                    "norm",
+                ]
+            )
+        # Escrevendo os dados
+        for gen, score in enumerate(score_plot, start=1):
+            writer.writerow(
+                [
+                    generation,
+                    solution_idx,
+                    gen,
+                    score,
+                    params["n_input"],
+                    params["input_indices"],
+                    params["n_hidden"],
+                    params["learn_rate"],
+                    params["norm"],
+                ]
+            )
+
+
+def main(params, generation=0, max_generations=0, solution_idx=0):
     print(params)
     adicionarCano = False
     geracao = 1
@@ -64,11 +118,12 @@ def main(params):
     cano_largura = canos[0].PIPE_TOP.get_width()
     score = 0
     max_score = 0
+    score_plot = []
     window = pygame.display.set_mode((FlappyBird.LARGURA, FlappyBird.ALTURA))
     Clock = pygame.time.Clock()
     run = True
     while run:
-        Clock.tick(120)
+        Clock.tick(480)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -116,16 +171,18 @@ def main(params):
                 if collided:
                     if top:
                         print("Morreu Cano Topo")
+                        score_plot.append(score)
                         inputs = getInputs(bird, canos[pipe_ind], norm, input_indices)
-                        print(inputs)
+                        # print(inputs)
                         birdBrains[x].backPropagation(
                             inputs,
                             0,
                         )
                     else:
                         print("Morreu Cano Baixo")
+                        score_plot.append(score)
                         inputs = getInputs(bird, canos[pipe_ind], norm, input_indices)
-                        print(inputs)
+                        # print(inputs)
                         birdBrains[x].backPropagation(
                             inputs,
                             1,
@@ -153,7 +210,7 @@ def main(params):
         for cano in canosRemovidos:
             canos.remove(cano)
 
-        # Checa Pássaro por pássaro se tocou o solo ou saiu da tela
+        # Checa Pássaro por pássaro se tocou o solo ou saiu da tela e se atingiu o max_points
         for x, bird in enumerate(birds):
             if bird.y + bird.img.get_height() >= BASE or bird.y < 0:
                 birds.pop(x)
@@ -161,20 +218,29 @@ def main(params):
 
                 if bird.y < 0:
                     print("Morreu Teto")
+                    score_plot.append(score)
                     inputs = getInputs(bird, canos[pipe_ind], norm, input_indices)
-                    print(inputs)
+                    # print(inputs)
                     birdBrains[x].backPropagation(
                         inputs,
                         0,
                     )
                 else:
                     print("Morreu Chão")
+                    score_plot.append(score)
                     inputs = getInputs(bird, canos[pipe_ind], norm, input_indices)
-                    print(inputs)
+                    # print(inputs)
                     birdBrains[x].backPropagation(
                         inputs,
                         1,
                     )
+                birdBrains.pop(x)
+
+            if score >= MAX_POINTS:
+                print("Score Máximo alcançado")
+                score_plot.append(score)
+                birds.pop(x)
+                removidos.append(birdBrains[x])
                 birdBrains.pop(x)
 
         fundo.move()
@@ -193,6 +259,9 @@ def main(params):
             geracao,
             len(birdBrains),
             max_score,
+            generation,
+            max_generations,
+            solution_idx,
         )
 
     print("Acabou...")
@@ -201,6 +270,8 @@ def main(params):
         if bird.getParametros()["score"] == max_score:
             print(bird.getParametros())
 
+    plotResults(score_plot, generation, max_generations, solution_idx)
+    saveResults(params, score_plot, generation, solution_idx)
     return max_score
 
 

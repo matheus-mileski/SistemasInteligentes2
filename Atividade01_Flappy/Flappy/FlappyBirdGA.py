@@ -71,6 +71,10 @@ class FlappyBirdGA:
 
         n_input = random.randint(1, max_n_input)
         input_indices = random.sample(range(max_n_input), n_input)
+
+        while len(input_indices) != n_input:
+            input_indices = random.sample(range(max_n_input), n_input)
+
         n_hidden = random.randint(1, max_n_hidden)
         learn_rate = random.uniform(min_lr, max_lr)
         norm = random.randint(min_norm, max_norm)
@@ -90,7 +94,12 @@ class FlappyBirdGA:
         mlp_params = self.decode_genome(solution)
 
         # Run Flappy Bird using this MLP and return the score as the fitness
-        score = self.run_flappy_bird(mlp_params)
+        score = self.run_flappy_bird(
+            mlp_params,
+            ga_instance.generations_completed,
+            self.num_generations,
+            solution_idx,
+        )
         return score
 
     def decode_genome(self, genome):
@@ -146,10 +155,12 @@ class FlappyBirdGA:
 
         return genome
 
-    def run_flappy_bird(self, mlp_params):
+    def run_flappy_bird(self, mlp_params, generation, max_generations, solution_idx):
         # Run an instance of Flappy Bird using the provided MLP parameters and architecture
         # and return the score
-        score = FlappyMLP.main(mlp_params)
+        score = FlappyMLP.main(
+            mlp_params, generation + 1, max_generations, solution_idx + 1
+        )
 
         return score
 

@@ -11,7 +11,7 @@ BIRD_IMGS = [
 PIPE_IMG = pygame.image.load("assets/pipe.png")
 BASE_IMG = pygame.image.load("assets/base.png")
 BACKGROUND_IMG = pygame.image.load("assets/background.png")
-FONT = pygame.font.SysFont("Arial", 40)
+FONT = pygame.font.SysFont("Arial", 30)
 
 
 class FlappyBird(object):
@@ -20,7 +20,7 @@ class FlappyBird(object):
     VELOCIDADE = 6
     LARGURA = 800
     ALTURA = 550
-    GAP = 145
+    GAP = 130
 
     def setGAP(valor):
         """
@@ -244,7 +244,20 @@ class Fundo(object):
             win.blit(self.IMG, (self.__papeisDeParedes[i], 0))
 
 
-def draw_window(win, birds, pipes, base, fundo, score, GEN, populacao, max_score):
+def draw_window(
+    win,
+    birds,
+    pipes,
+    base,
+    fundo,
+    score,
+    GEN,
+    populacao,
+    max_score,
+    generation,
+    max_generations,
+    solution_idx,
+):
     """
     Desenha os elementos na tela
 
@@ -261,14 +274,22 @@ def draw_window(win, birds, pipes, base, fundo, score, GEN, populacao, max_score
     for bird in birds:
         bird.draw(win)
 
-    text1 = FONT.render("Score : " + str(score), 1, (255, 255, 255))
-    text2 = FONT.render("Geração : " + str(GEN), 1, (255, 255, 255))
-    text3 = FONT.render("População : " + str(populacao), 1, (255, 255, 255))
-    text4 = FONT.render("Record : " + str(max_score), 1, (255, 255, 255))
+    text1 = FONT.render("Score: " + str(score), 1, (255, 255, 255))
+    text2 = FONT.render("Geração: " + str(GEN), 1, (255, 255, 255))
+    text3 = FONT.render("População: " + str(populacao), 1, (255, 255, 255))
+    text4 = FONT.render("Record: " + str(max_score), 1, (255, 255, 255))
+    text5 = FONT.render("Individuo AG: " + str(solution_idx), 1, (255, 0, 0))
+    text6 = FONT.render(
+        "Geração AG: " + str(generation) + "/" + str(max_generations),
+        1,
+        (255, 0, 0),
+    )
 
     win.blit(text1, (FlappyBird.LARGURA - 10 - text1.get_width(), 10))
     win.blit(text4, (FlappyBird.LARGURA - 10 - text4.get_width(), 40))
     win.blit(text2, (10, 10))
     win.blit(text3, (10, 40))
+    win.blit(text5, (FlappyBird.LARGURA - 10 - text5.get_width(), 500))
+    win.blit(text6, (10, 500))
 
     pygame.display.update()
