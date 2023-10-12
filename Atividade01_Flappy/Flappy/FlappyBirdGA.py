@@ -7,8 +7,8 @@ import FlappyMLP
 
 
 class FlappyBirdGA:
-    def __init__(self, num_generations=100, population_size=10, num_parents=3):
-        GENOME = [
+    def __init__(self, num_generations=99, population_size=50, num_parents=5):
+        self.GENOME = [
             "n_input",
             "i0",
             "i1",
@@ -32,8 +32,12 @@ class FlappyBirdGA:
             num_parents_mating=self.num_parents,
             fitness_func=self.fitness_function,
             sol_per_pop=self.population_size,
-            num_genes=len(GENOME),
+            num_genes=len(self.GENOME),
             initial_population=initial_population,
+            crossover_type="uniform",
+            mutation_type="swap",
+            parent_selection_type="tournament",
+            on_mutation=self.ensure_valid_genomes,
         )
 
     def generate_initial_population(self, pop_size):
@@ -72,7 +76,7 @@ class FlappyBirdGA:
         n_input = random.randint(1, max_n_input)
         input_indices = random.sample(range(max_n_input), n_input)
 
-        while len(input_indices) != n_input:
+        while len(input_indices) < n_input:
             input_indices = random.sample(range(max_n_input), n_input)
 
         n_hidden = random.randint(1, max_n_hidden)
@@ -155,11 +159,66 @@ class FlappyBirdGA:
 
         return genome
 
+    def ensure_valid_genomes(self, ga_instance, offspring):
+        """
+        This function will be called after the mutation operation in each generation
+        and will adjust the genomes to ensure they satisfy the problem's constraints.
+        """
+        new_population = []
+
+        for genome in ga_instance.population:
+            # Check and adjust the genome to satisfy the constraints.
+            genome[0] = int(round(genome[0]))
+            if genome[0] == 0:
+                genome[0] = 1
+            elif genome[0] > len(self.GENOME):
+                genome[0] = 6
+
+            genome[7] = int(round(genome[7]))
+            if genome[7] == 0:
+                genome[7] = 1
+
+            if genome[8] == 0.0:
+                genome[8] = 0.1
+
+            if genome[9] == 0.0:
+                genome[9] = 1
+
+            # Ensure input_indices has length n_input
+            input_flags = genome[1:7]
+            input_flags = [1 if val >= 0.5 else 0 for val in input_flags]
+
+            n_active_flags = int(genome[0])
+
+            while sum(input_flags) != n_active_flags:
+                print(sum(input_flags), n_active_flags)
+                print(input_flags)
+                if sum(input_flags) > n_active_flags:
+                    # deactivate a random active flag
+                    active_flags = [i for i, x in enumerate(input_flags) if x == 1]
+                    try:
+                        input_flags[random.choice(active_flags)] = 0
+                    except:
+                        pass
+                else:
+                    # activate a random inactive flag
+                    inactive_flags = [i for i, x in enumerate(input_flags) if x == 0]
+                    try:
+                        input_flags[random.choice(inactive_flags)] = 1
+                    except:
+                        pass
+
+            genome[1:7] = input_flags
+            new_population.append(genome)
+
+        # Replace the old population with the new one
+        ga_instance.population = np.array(new_population)
+
     def run_flappy_bird(self, mlp_params, generation, max_generations, solution_idx):
         # Run an instance of Flappy Bird using the provided MLP parameters and architecture
         # and return the score
         score = FlappyMLP.main(
-            mlp_params, generation + 1, max_generations, solution_idx + 1
+            mlp_params, generation + 1, max_generations + 1, solution_idx + 1
         )
 
         return score

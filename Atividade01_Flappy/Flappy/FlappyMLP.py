@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import csv
 import os
+import base64
 
 # os.environ["SDL_VIDEODRIVER"] = "dummy"
 
@@ -13,7 +14,7 @@ BASE = 510
 PIPE_INICIAL = 250
 POPULACAO = 1
 MAX_GERACOES = 100
-MAX_POINTS = 3000
+MAX_POINTS = 1000
 
 
 def getInputs(bird, pipe, norm, input_indices):
@@ -49,8 +50,21 @@ def plotResults(score_plot, generation, max_generations, solution_idx):
     plt.close()
 
 
-def saveResults(params, score_plot, generation, solution_idx):
+def saveResults(params, score_plot, generation, solution_idx, bird_params):
     csv_file = f"results/results.csv"
+
+    arrPesosOcultaStr = np.array2string(
+        bird_params["pesosOculta"], separator=",", precision=16, suppress_small=True
+    )
+    arrPesosOcultaBytes = arrPesosOcultaStr.encode("utf-8")
+    arrPesosOculta = base64.b64encode(arrPesosOcultaBytes).decode("utf-8")
+
+    arrPesosSaidaStr = np.array2string(
+        bird_params["pesosSaida"], separator=",", precision=16, suppress_small=True
+    )
+    arrPesosSaidaBytes = arrPesosSaidaStr.encode("utf-8")
+    arrPesosSaida = base64.b64encode(arrPesosSaidaBytes).decode("utf-8")
+
     with open(csv_file, mode="a", newline="") as file:
         writer = csv.writer(file)
         # Escrevendo o cabeçalho apenas se o arquivo é novo
@@ -66,6 +80,8 @@ def saveResults(params, score_plot, generation, solution_idx):
                     "n_hidden",
                     "learn_rate",
                     "norm",
+                    "pesosOculta",
+                    "pesosSaida",
                 ]
             )
         # Escrevendo os dados
@@ -81,6 +97,8 @@ def saveResults(params, score_plot, generation, solution_idx):
                     params["n_hidden"],
                     params["learn_rate"],
                     params["norm"],
+                    arrPesosOculta,
+                    arrPesosSaida,
                 ]
             )
 
@@ -93,6 +111,11 @@ def main(params, generation=0, max_generations=0, solution_idx=0):
     birds = []
 
     input_indices = params["input_indices"]
+
+    if len(input_indices) != params["n_input"]:
+        print("Genoma gerado errado")
+        return 0
+
     norm = params["norm"]
 
     for i in range(POPULACAO):
@@ -242,6 +265,7 @@ def main(params, generation=0, max_generations=0, solution_idx=0):
                 birds.pop(x)
                 removidos.append(birdBrains[x])
                 birdBrains.pop(x)
+                run = False
 
         fundo.move()
         chao.move()
@@ -266,13 +290,19 @@ def main(params, generation=0, max_generations=0, solution_idx=0):
 
     print("Acabou...")
     print(f"Max Score: {max_score}")
+
+    max_score_bird = removidos[-1].getParametros()
+
     for bird in removidos:
+        # try to find a better bird
         if bird.getParametros()["score"] == max_score:
-            print(bird.getParametros())
+            max_score_bird = bird.getParametros()
+            break
 
     plotResults(score_plot, generation, max_generations, solution_idx)
-    saveResults(params, score_plot, generation, solution_idx)
-    return max_score
+    saveResults(params, score_plot, generation, solution_idx, max_score_bird)
+
+    return max_score + (MAX_GERACOES - geracao)
 
 
 if __name__ == "__main__":
