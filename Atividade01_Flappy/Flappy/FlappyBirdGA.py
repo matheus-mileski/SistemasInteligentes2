@@ -34,8 +34,8 @@ class FlappyBirdGA:
             sol_per_pop=self.population_size,
             num_genes=len(self.GENOME),
             initial_population=initial_population,
-            crossover_type="uniform",
-            mutation_type="swap",
+            crossover_type="two_points",
+            mutation_type="random",
             parent_selection_type="tournament",
             on_mutation=self.ensure_valid_genomes,
         )

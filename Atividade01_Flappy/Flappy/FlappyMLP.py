@@ -112,7 +112,11 @@ def main(params, generation=0, max_generations=0, solution_idx=0):
 
     input_indices = params["input_indices"]
 
-    if len(input_indices) != params["n_input"]:
+    if (
+        len(input_indices) != params["n_input"]
+        or params["n_input"] == 0.0
+        or params["n_hidden"] == 0.0
+    ):
         print("Genoma gerado errado")
         return 0
 
